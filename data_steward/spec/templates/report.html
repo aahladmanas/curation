@@ -30,15 +30,27 @@
                         for(var j = 0; j < fields.length; j ++ ){
                             tr.append("<td align='left'>" + row[fields[j]] + "</td>");
                         };
-                        for(var j = 0; j < checks.length; j ++ ){
-                            if( row[checks[j]]){
-                              tr.append("<td align='left'> &#10004; </td>");
-                            }
-                            else{
-                              var message = String(row['message']) ;
-                              tr.append( '<td align="left" data-toggle="tooltip" title= "' + message + '"> &#10006;</td>');
-                            }
-                        };
+                        
+                        if(!row["found"]){
+                              tr.append("<td align='left' style='color:red'> &#10006; </td>");
+                              tr.append("<td align='left' style='color:red'> &#10006; </td>");
+                              tr.append("<td align='left' style='color:red'> &#10006; </td>");
+                        }
+                        else if(row["found"] && !row["parsed"] && !row["loaded"]){
+                              tr.append("<td align='left' style='color:Orange'> &#10004; </td>");
+                              tr.append("<td align='left' style='color:red'> &#10006; </td>");
+                              tr.append("<td align='left' style='color:red'> &#10006; </td>");
+                        }
+                        else if(row["found"] && row["parsed"] && row["loaded"]){
+                              tr.append("<td align='left' style='color:green'> &#10004; </td>");
+                              tr.append("<td align='left' style='color:green'> &#10004; </td>");
+                              tr.append("<td align='left' style='color:green'> &#10004; </td>");
+                        }
+                        else{
+                              tr.append("<td align='left'>  </td>");
+                              tr.append("<td align='left'>  </td>");
+                              tr.append("<td align='left'>  </td>");
+                        }
                         $('#tb').append(tr)
                     };
                 });
