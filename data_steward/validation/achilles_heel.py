@@ -4,6 +4,7 @@ import bq_utils
 import re
 import sql_wrangle
 import logging
+import time
 
 ACHILLES_HEEL_RESULTS = 'achilles_heel_results'
 ACHILLES_RESULTS_DERIVED = 'achilles_results_derived'
@@ -91,17 +92,18 @@ def run_heel(hpo_id):
 
         elif sql_wrangle.is_truncate(command):
             table_id = sql_wrangle.get_truncate_table_name(command)
-            if bq_utils.table_exists(table_id):
-                bq_utils.delete_table(table_id)
+            if bq_utils.table_exists(table_id + str(into_temp_count)):
+                bq_utils.delete_table(table_id + str(into_temp_count))
         elif sql_wrangle.is_drop(command):
             table_id = sql_wrangle.get_drop_table_name(command)
-            if bq_utils.table_exists(table_id):
-                bq_utils.delete_table(table_id)
+            if bq_utils.table_exists(table_id + str(into_temp_count)):
+                bq_utils.delete_table(table_id + str(into_temp_count))
         else:
             if current_temp_table is not None:
                 command = command.replace(current_temp_table, current_temp_table + str(into_temp_count))
             insert_result = bq_utils.query(command)
             running_query_ids.append(insert_result['jobReference']['jobId'])
+            time.sleep(1)
 
     success_flag = bq_utils.wait_on_jobs(running_query_ids)
     if not success_flag:
