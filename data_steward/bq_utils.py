@@ -141,6 +141,28 @@ def get_job_details(job_id):
     return bq_service.jobs().get(projectId=app_id, jobId=job_id).execute()
 
 
+def wait_on_jobs(job_ids, retry_count=30, poll_interval=1):
+    job_count = len(job_ids)
+    print 'Waiting on {} jobs ... '.format(job_count)
+
+    done_flag = False
+    retries = 0
+    while not done_flag and retries < retry_count:
+        time.sleep(poll_interval)
+        retries = 1
+        done_flag = True
+
+        job_details_list = [get_job_details(job_id) for job_id in job_ids]
+        for job_details in job_details_list:
+            job_status = job_details['status']
+            if job_status['state'] != 'DONE':
+                done_flag = False
+
+    if not done_flag:
+        return False
+    return True
+
+
 def merge_tables(source_dataset_id,
                  source_table_id_list,
                  destination_dataset_id,
@@ -232,7 +254,8 @@ def query(q, use_legacy_sql=False, destination_table_id=None):
     :param q: SQL statement
     :param use_legacy_sql: True if using legacy syntax, False by default
     :param destination_table_id: if set, output is saved in a table with the specified id
-    :return: if destination_table_id is supplied then job info, otherwise job query response (see https://goo.gl/AoGY6P and https://goo.gl/bQ7o2t)
+    :return: if destination_table_id is supplied then job info, otherwise job query response
+            (see https://goo.gl/AoGY6P and https://goo.gl/bQ7o2t)
     """
     bq_service = create_service()
     app_id = app_identity.get_application_id()
@@ -266,7 +289,21 @@ def query(q, use_legacy_sql=False, destination_table_id=None):
             'query': q,
             'useLegacySql': use_legacy_sql
         }
-        return bq_service.jobs().query(projectId=app_id, body=job_body).execute()
+        job_body = {
+            'configuration':
+                {
+                    'query': {
+                        'query': q,
+                        'useLegacySql': use_legacy_sql,
+                        'defaultDataset': {
+                            'projectId': app_id,
+                            'datasetId': get_dataset_id()
+                        }
+                    }
+                }
+        }
+ 
+        return bq_service.jobs().insert(projectId=app_id, body=job_body).execute()
 
 
 def create_table(table_id, fields, drop_existing=False):

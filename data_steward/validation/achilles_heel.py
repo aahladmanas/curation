@@ -2,7 +2,6 @@ import resources
 import os
 import bq_utils
 import re
-import time
 import sql_wrangle
 import logging
 
@@ -67,25 +66,42 @@ def run_heel(hpo_id):
     # very long test
     commands = _get_heel_commands(hpo_id)
     count = 0
+    into_temp_count = 0
+    current_temp_table = None
+    running_query_ids = []
     for command in commands:
         count = count + 1
-        logging.debug(' ---- running query # {}'.format(count))
-        logging.debug(' ---- Running `%s`...\n' % command)
+        logging.debug(' ---- submissing query # {}'.format(count))
+        logging.debug(' ---- QUERY : `%s`...\n' % command)
         if sql_wrangle.is_to_temp_table(command):
-            table_id = sql_wrangle.get_temp_table_name(command)
+            # wait for running query_ids to complete
+            success_flag = bq_utils.wait_on_jobs(running_query_ids)
+            if not success_flag:
+                raise RuntimeError('Jobs take more than 30 seconds!')
+            running_query_ids = []
+
+            temp_table_name = sql_wrangle.get_temp_table_name(command)
+            table_id = temp_table_name + str(into_temp_count)
+            current_temp_table = temp_table_name + ""
+
             query = sql_wrangle.get_temp_table_query(command)
-            bq_utils.query(query, False, table_id)
-            time.sleep(6)
+            insert_result = bq_utils.query(query, False, table_id)
+            # wait for temp table insert job to complete
+            bq_utils.wait_on_jobs([insert_result['jobReference']['jobId']], retry_count=10)
+
         elif sql_wrangle.is_truncate(command):
             table_id = sql_wrangle.get_truncate_table_name(command)
-            query = 'DELETE FROM %s WHERE TRUE' % table_id
-            bq_utils.query(query)
+            if bq_utils.table_exists(table_id):
+                bq_utils.delete_table(table_id)
         elif sql_wrangle.is_drop(command):
             table_id = sql_wrangle.get_drop_table_name(command)
-            bq_utils.delete_table(table_id)
+            if bq_utils.table_exists(table_id):
+                bq_utils.delete_table(table_id)
         else:
-            bq_utils.query(command)
-        time.sleep(0.1)
+            if current_temp_table is not None:
+                command = command.replace(current_temp_table, current_temp_table + str(into_temp_count))
+            insert_result = bq_utils.query(command)
+            running_query_ids.append(insert_result['jobReference']['jobId'])
 
 
 def create_tables(hpo_id, drop_existing=False):
