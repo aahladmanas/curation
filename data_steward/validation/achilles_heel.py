@@ -103,6 +103,10 @@ def run_heel(hpo_id):
             insert_result = bq_utils.query(command)
             running_query_ids.append(insert_result['jobReference']['jobId'])
 
+    success_flag = bq_utils.wait_on_jobs(running_query_ids)
+    if not success_flag:
+        raise RuntimeError('Jobs take more than 30 seconds!')
+
 
 def create_tables(hpo_id, drop_existing=False):
     """
