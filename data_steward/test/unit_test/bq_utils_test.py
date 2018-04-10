@@ -14,6 +14,7 @@ import mock
 # import time
 
 PERSON = 'person'
+BQ_TIMEOUT_RETRIES = 7
 
 
 class BqUtilsTest(unittest.TestCase):
@@ -75,7 +76,7 @@ class BqUtilsTest(unittest.TestCase):
         load_job_id = load_results['jobReference']['jobId']
         incomplete_jobs = bq_utils.wait_on_jobs([load_job_id])
         self.assertEqual(len(incomplete_jobs), 0, 'loading table {} timed out'.format(table_name))
-        query_response = bq_utils.query('SELECT COUNT(1) FROM %(table_name)s' % locals())
+        query_response = bq_utils.query('SELECT COUNT(1) FROM %(table_name)s' % locals()).execute()
         self.assertEqual(query_response['kind'], 'bigquery#queryResponse')
 
     def test_load_cdm_csv(self):
@@ -107,7 +108,7 @@ class BqUtilsTest(unittest.TestCase):
 
         table_id = bq_utils.get_table_id(FAKE_HPO_ID, PERSON)
         q = 'SELECT person_id FROM %s' % table_id
-        result = bq_utils.query(q)
+        result = bq_utils.query(q).execute()
         self.assertEqual(5, int(result['totalRows']))
 
     def test_merge_with_good_data(self):
