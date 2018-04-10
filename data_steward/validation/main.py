@@ -162,11 +162,11 @@ def validate_all_hpos():
     for item in resources.hpo_csv():
         hpo_id = item['hpo_id']
         try:
-            run_validation(hpo_id)
+            run_validation(hpo_id, True)
         except BucketDoesNotExistError as bucket_error:
             bucket = bucket_error.bucket
             logging.warn('Bucket `{bucket}` configured for hpo_id `hpo_id` does not exist'.format(bucket=bucket,
-                                                                                                  hpo_id=hpo_id))
+            continue
     return 'validation done!'
 
 
@@ -214,6 +214,8 @@ def run_validation(hpo_id, force_run=False):
 
         errors = []
         results = []
+        jobs_to_wait_on = []
+        table_job_map = {}
         found_cdm_file_names = found_cdm_files
 
         # Create all tables first to simplify downstream processes
@@ -227,9 +229,7 @@ def run_validation(hpo_id, force_run=False):
             logging.info('Validating file `{file_name}`'.format(file_name=cdm_file_name))
             found = parsed = loaded = 0
             cdm_table_name = cdm_file_name.split('.')[0]
-
             if cdm_file_name in found_cdm_file_names:
-                found = 1
                 load_results = bq_utils.load_cdm_csv(hpo_id, cdm_table_name, folder_prefix)
                 load_job_id = load_results['jobReference']['jobId']
                 incomplete_jobs = bq_utils.wait_on_jobs([load_job_id])

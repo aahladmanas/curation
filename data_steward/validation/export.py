@@ -57,7 +57,7 @@ def export_from_path(p, hpo_id=None):
         with open(abs_path, 'r') as fp:
             sql = fp.read()
             sql = render(sql, hpo_id, results_schema=bq_utils.get_dataset_id(), vocab_schema='')
-            query_result = bq_utils.query(sql)
+            query_result = bq_utils.query(sql).execute()
             # TODO reshape results
             result[name] = query_result_to_payload(query_result)
 

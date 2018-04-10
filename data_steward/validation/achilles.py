@@ -42,7 +42,7 @@ def load_analyses(hpo_id):
     """
     commands = _get_load_analysis_commands(hpo_id)
     for command in commands:
-        bq_utils.query(command)
+        bq_utils.query(command).execute()
 
 
 def run_analyses(hpo_id):
@@ -52,29 +52,25 @@ def run_analyses(hpo_id):
     :return:
     """
     commands = _get_run_analysis_commands(hpo_id)
-    for command in commands:
-        logging.debug(' ---- Running `%s`...\n' % command)
-        if sql_wrangle.is_to_temp_table(command):
-            table_id = sql_wrangle.get_temp_table_name(command)
-            query = sql_wrangle.get_temp_table_query(command)
-            insert_query_job_result = bq_utils.query(query, False, table_id)
-            query_job_id = insert_query_job_result['jobReference']['jobId']
-
-            incomplete_jobs = bq_utils.wait_on_jobs([query_job_id])
-            if len(incomplete_jobs) > 0:
-                logging.critical('tempresults doesnt get created in 15 secs')
-                raise RuntimeError('Tempresults taking too long to create')
-        elif sql_wrangle.is_truncate(command):
-            table_id = sql_wrangle.get_truncate_table_name(command)
-            if bq_utils.table_exists(table_id):
-                bq_utils.delete_table(table_id)
-        elif sql_wrangle.is_drop(command):
-            table_id = sql_wrangle.get_drop_table_name(command)
-            if bq_utils.table_exists(table_id):
-                bq_utils.delete_table(table_id)
-        else:
-            bq_utils.query(command)
-
+    service = bq_utils.create_service()
+    batch = service.new_batch_http_request()
+    for command in commands[:50]:
+        logging.debug(' ---- Adding `%s` to batch' % command)
+        batch.add(bq_utils.query(command))
+    logging.debug(' ---- Running batch query ...')
+    batch.execute() 
+    batch = service.new_batch_http_request()
+    for command in commands[50:100]:
+        logging.debug(' ---- Adding `%s` to batch' % command)
+        batch.add(bq_utils.query(command))
+    logging.debug(' ---- Running batch query ...')
+    batch.execute()
+    batch = service.new_batch_http_request()
+    for command in commands[100:]:
+        logging.debug(' ---- Adding `%s` to batch' % command)
+        batch.add(bq_utils.query(command))
+    logging.debug(' ---- Running batch query ...')
+    batch.execute()
 
 def create_tables(hpo_id, drop_existing=False):
     """

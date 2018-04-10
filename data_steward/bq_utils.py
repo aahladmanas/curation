@@ -306,7 +306,7 @@ def query(q, use_legacy_sql=False, destination_table_id=None, retry_count=BQ_DEF
                     }
                 }
         }
-        return bq_service.jobs().insert(projectId=app_id, body=job_body).execute(num_retries=retry_count)
+        return bq_service.jobs().insert(projectId=app_id, body=job_body)
     else:
         job_body = {
             'defaultDataset': {
@@ -317,7 +317,7 @@ def query(q, use_legacy_sql=False, destination_table_id=None, retry_count=BQ_DEF
             'timeoutMs': 60000,
             'useLegacySql': use_legacy_sql
         }
-        return bq_service.jobs().query(projectId=app_id, body=job_body).execute(num_retries=retry_count)
+        return bq_service.jobs().query(projectId=app_id, body=job_body)
 
 
 def create_table(table_id, fields, drop_existing=False, dataset_id=None):

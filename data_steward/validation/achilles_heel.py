@@ -74,7 +74,7 @@ def run_heel(hpo_id):
         if sql_wrangle.is_to_temp_table(command):
             table_id = sql_wrangle.get_temp_table_name(command)
             query = sql_wrangle.get_temp_table_query(command)
-            insert_query_job_result = bq_utils.query(query, False, table_id)
+            insert_query_job_result = bq_utils.query(query, False, table_id).execute()
             query_job_id = insert_query_job_result['jobReference']['jobId']
 
             incomplete_jobs = bq_utils.wait_on_jobs([query_job_id])
@@ -84,12 +84,12 @@ def run_heel(hpo_id):
         elif sql_wrangle.is_truncate(command):
             table_id = sql_wrangle.get_truncate_table_name(command)
             query = 'DELETE FROM %s WHERE TRUE' % table_id
-            bq_utils.query(query)
+            bq_utils.query(query).execute()
         elif sql_wrangle.is_drop(command):
             table_id = sql_wrangle.get_drop_table_name(command)
             bq_utils.delete_table(table_id)
         else:
-            bq_utils.query(command)
+            bq_utils.query(command).execute()
 
 
 def create_tables(hpo_id, drop_existing=False):

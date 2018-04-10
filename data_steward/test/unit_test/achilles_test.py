@@ -78,7 +78,7 @@ class AchillesTest(unittest.TestCase):
         achilles.load_analyses(FAKE_HPO_ID)
         cmd = validation.sql_wrangle.qualify_tables(
             'SELECT DISTINCT(analysis_id) FROM %sachilles_analysis' % validation.sql_wrangle.PREFIX_PLACEHOLDER, FAKE_HPO_ID)
-        result = bq_utils.query(cmd)
+        result = bq_utils.query(cmd).execute()
         self.assertEqual(ACHILLES_LOOKUP_COUNT, int(result['totalRows']))
 
     def test_get_run_analysis_commands(self):
@@ -104,7 +104,7 @@ class AchillesTest(unittest.TestCase):
         achilles.run_analyses(hpo_id=FAKE_HPO_ID)
         cmd = validation.sql_wrangle.qualify_tables(
             'SELECT COUNT(1) FROM %sachilles_results' % validation.sql_wrangle.PREFIX_PLACEHOLDER, FAKE_HPO_ID)
-        result = bq_utils.query(cmd)
+        result = bq_utils.query(cmd).execute()
         self.assertEqual(int(result['rows'][0]['f'][0]['v']), ACHILLES_RESULTS_COUNT)
 
     def test_parse_temp(self):
