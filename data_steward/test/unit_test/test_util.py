@@ -126,8 +126,11 @@ def _export_query_responses():
 
 def empty_bucket(bucket):
     bucket_items = gcs_utils.list_bucket(bucket)
+    service = gcs_utils.create_service()
+    batch = service.new_batch_http_request()
     for bucket_item in bucket_items:
-        gcs_utils.delete_object(bucket, bucket_item['name'])
+        batch.add(gcs_utils.delete_object(bucket, bucket_item['name']))
+    batch.execute()
 
 
 def delete_all_tables(dataset_id):

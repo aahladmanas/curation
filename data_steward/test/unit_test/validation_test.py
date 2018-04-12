@@ -25,12 +25,7 @@ class ValidationTest(unittest.TestCase):
         self.testbed.init_blobstore_stub()
         self.testbed.init_datastore_v3_stub()
         self.hpo_bucket = gcs_utils.get_hpo_bucket(test_util.FAKE_HPO_ID)
-        self._empty_bucket()
-
-    def _empty_bucket(self):
-        bucket_items = gcs_utils.list_bucket(self.hpo_bucket)
-        for bucket_item in bucket_items:
-            gcs_utils.delete_object(self.hpo_bucket, bucket_item['name'])
+        self._empty_bucket = test_util.empty_bucket
 
     @mock.patch('api_util.check_cron')
     def _test_validate_missing_files_output(self, mock_check_cron):
@@ -58,7 +53,7 @@ class ValidationTest(unittest.TestCase):
             self.assertFalse(main.all_required_files_loaded(test_util.FAKE_HPO_ID, folder_prefix))
 
     @mock.patch('api_util.check_cron')
-    def _test_errors_csv(self, mock_check_cron):
+    def test_errors_csv(self, mock_check_cron):
         folder_prefix = 'dummy-prefix-2018-03-22/'
         test_util.write_cloud_str(self.hpo_bucket, folder_prefix + 'person.csv', ".\n .,.,.")
 
@@ -80,7 +75,7 @@ class ValidationTest(unittest.TestCase):
                 self.assertEqual(expected, actual_result)
 
     @mock.patch('api_util.check_cron')
-    def _test_all_files_unparseable_output(self, mock_check_cron):
+    def test_all_files_unparseable_output(self, mock_check_cron):
         # TODO possible bug: if no pre-existing table, results in bq table not found error
         folder_prefix = 'dummy-prefix-2018-03-22/'
         for cdm_table in common.CDM_FILES:
@@ -105,7 +100,7 @@ class ValidationTest(unittest.TestCase):
             self.assertEqual(expected, actual_result)
 
     @mock.patch('api_util.check_cron')
-    def _test_bad_file_names(self, mock_check_cron):
+    def test_bad_file_names(self, mock_check_cron):
         folder_prefix = 'dummy-prefix-2018-03-22/'
         exclude_file_list = ["person_final.csv",
                              "condition_occurence.csv",  # misspelled
@@ -209,7 +204,7 @@ class ValidationTest(unittest.TestCase):
                     self.table_has_clustering(table_info)
 
     @mock.patch('api_util.check_cron')
-    def _test_validation_done_folder(self, mock_check_cron):
+    def test_validation_done_folder(self, mock_check_cron):
         folder_prefix_v1 = 'dummy-prefix-2018-03-22-v1/'
         folder_prefix = 'dummy-prefix-2018-03-22/'
 
@@ -225,7 +220,7 @@ class ValidationTest(unittest.TestCase):
             self.assertFalse(folder_prefix_v1 in return_string)
 
     @mock.patch('api_util.check_cron')
-    def _test_latest_folder_validation(self, mock_check_cron):
+    def test_latest_folder_validation(self, mock_check_cron):
         folder_prefix_1 = 'dummy-prefix-2018-03-22-v1/'
         folder_prefix_2 = 'dummy-prefix-2018-03-22-v2/'
         folder_prefix_3 = 'dummy-prefix-2018-03-22-v3/'
@@ -240,7 +235,7 @@ class ValidationTest(unittest.TestCase):
             return_string = c.get(test_util.VALIDATE_HPO_FILES_URL).data
             # TODO Check that folder_prefix_3 has expected results
 
-    def _test_folder_list(self):
+    def test_folder_list(self):
         folder_prefix_1 = 'dummy-prefix-2018-03-22-v1/'
         folder_prefix_2 = 'dummy-prefix-2018-03-22-v2/'
         folder_prefix_3 = 'dummy-prefix-2018-03-22-v3/'

@@ -150,9 +150,8 @@ def delete_object(bucket, name):
     """
     service = create_service()
     req = service.objects().delete(bucket=bucket, object=name)
-    resp = req.execute(num_retries=GCS_DEFAULT_RETRY_COUNT)
     # TODO return something useful
-    return resp
+    return req
 
 
 def copy_object(source_bucket, source_object_id, destination_bucket, destination_object_id):
