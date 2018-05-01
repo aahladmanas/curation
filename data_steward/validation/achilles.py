@@ -51,14 +51,20 @@ def run_analyses(hpo_id):
     :param hpo_id:
     :return:
     """
+    count = 0
     commands = _get_run_analysis_commands(hpo_id)
     service = bq_utils.create_service()
     batch = service.new_batch_http_request()
+    def count_increment(pid, response, exception):
+        print(pid, response)
+        count = count + 1
     for command in commands[:50]:
         logging.debug(' ---- Adding `%s` to batch' % command)
         batch.add(bq_utils.query(command))
     logging.debug(' ---- Running batch query ...')
     batch.execute() 
+    if count == 50:
+        assert False,'count getting updated'
     batch = service.new_batch_http_request()
     for command in commands[50:100]:
         logging.debug(' ---- Adding `%s` to batch' % command)

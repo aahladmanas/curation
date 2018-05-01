@@ -63,7 +63,9 @@ def save_datasources_json(hpo_id=None, folder_prefix="", target_bucket=None):
     datasource = dict(name=hpo_id, folder=hpo_id, cdmVersion=5)
     datasources = dict(datasources=[datasource])
     datasources_fp = StringIO.StringIO(json.dumps(datasources))
-    result = gcs_utils.upload_object(hpo_bucket, folder_prefix + ACHILLES_EXPORT_DATASOURCES_JSON, datasources_fp)
+    result = gcs_utils.upload_object(hpo_bucket,
+                                     folder_prefix + ACHILLES_EXPORT_DATASOURCES_JSON,
+                                     datasources_fp).execute()
     return result
 
 
@@ -90,7 +92,9 @@ def run_export(hpo_id=None, folder_prefix="", target_bucket=None):
         result = export.export_from_path(sql_path, hpo_id)
         content = json.dumps(result)
         fp = StringIO.StringIO(content)
-        result = gcs_utils.upload_object(hpo_bucket, folder_prefix + _reports_prefix + export_name + '.json', fp)
+        result = gcs_utils.upload_object(hpo_bucket,
+                                         folder_prefix + _reports_prefix + export_name + '.json',
+                                         fp).execute()
         results.append(result)
     datasources_json_result = save_datasources_json(hpo_id=hpo_id, folder_prefix=folder_prefix, target_bucket=hpo_bucket)
     results.append(datasources_json_result)
@@ -117,8 +121,9 @@ def run_achilles(hpo_id=None):
 
 @api_util.auth_required_cron
 def upload_achilles_files(hpo_id):
-    result = _upload_achilles_files(hpo_id, "")
-    return json.dumps(result, sort_keys=True, indent=4, separators=(',', ': '))
+    _upload_achilles_files(hpo_id, "")
+    # TODO: more informative upload
+    return json.dumps('upload done', sort_keys=True, indent=4, separators=(',', ': '))
 
 
 def _upload_achilles_files(hpo_id=None, folder_prefix='', target_bucket=None):
@@ -136,13 +141,14 @@ def _upload_achilles_files(hpo_id=None, folder_prefix='', target_bucket=None):
     else:
         bucket = gcs_utils.get_hpo_bucket(hpo_id)
 
+    bucket = gcs_utils.get_hpo_bucket(hpo_id)
+    request_list = []
     for filename in common.ACHILLES_INDEX_FILES:
         logging.debug('Uploading achilles file `%s` to bucket `%s`' % (filename, bucket))
         bucket_file_name = filename.split(resources.resource_path + os.sep)[1].strip()
         with open(filename, 'r') as fp:
-            upload_result = gcs_utils.upload_object(bucket, folder_prefix + bucket_file_name, fp)
-            results.append(upload_result)
-    return results
+            request_list.append(gcs_utils.upload_object(bucket, folder_prefix + bucket_file_name, fp).execute())
+    gcs_utils.execute_as_batch(request_list)
 
 
 @api_util.auth_required_cron
@@ -368,13 +374,14 @@ def copy_files(hpo_id):
 
     prefix = hpo_id + '/' + hpo_bucket + '/'
 
+    request_list = []
     for item in bucket_items:
         item_name = item['name']
-        gcs_utils.copy_object(source_bucket=hpo_bucket,
-                              source_object_id=item_name,
-                              destination_bucket=drc_private_bucket,
-                              destination_object_id=prefix + item_name)
-
+        request_list.append(gcs_utils.copy_object(source_bucket=hpo_bucket,
+                                                  source_object_id=item_name,
+                                                  destination_bucket=drc_private_bucket,
+                                                  destination_object_id=prefix + item_name))
+    gcs_utils.execute_as_batch(request_list)
     return '{"copy-status": "done"}'
 
 
@@ -393,7 +400,7 @@ def _save_errors_in_gcs(bucket, name, errors):
         line = '"%(file_name)s","%(message)s"\n' % locals()
         f.write(line)
     f.seek(0)
-    result = gcs_utils.upload_object(bucket, name, f)
+    result = gcs_utils.upload_object(bucket, name, f).execute()
     f.close()
     return result
 
@@ -412,7 +419,7 @@ def _save_warnings_in_gcs(bucket, name, warnings):
         line = '"%(file_name)s","%(message)s"\n' % locals()
         f.write(line)
     f.seek(0)
-    result = gcs_utils.upload_object(bucket, name, f)
+    result = gcs_utils.upload_object(bucket, name, f).execute()
     f.close()
     return result
 
@@ -431,7 +438,7 @@ def _save_result_in_gcs(bucket, name, cdm_file_results):
         line = '"%(cdm_file_name)s","%(found)s","%(parsed)s","%(loaded)s"\n' % locals()
         f.write(line)
     f.seek(0)
-    result = gcs_utils.upload_object(bucket, name, f)
+    result = gcs_utils.upload_object(bucket, name, f).execute()
     f.close()
     return result
 
@@ -447,7 +454,7 @@ def _write_string_to_file(bucket, name, string):
     f = StringIO.StringIO()
     f.write(string)
     f.seek(0)
-    result = gcs_utils.upload_object(bucket, name, f)
+    result = gcs_utils.upload_object(bucket, name, f).execute()
     f.close()
     return result
 

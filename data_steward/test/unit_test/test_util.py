@@ -126,11 +126,10 @@ def _export_query_responses():
 
 def empty_bucket(bucket):
     bucket_items = gcs_utils.list_bucket(bucket)
-    service = gcs_utils.create_service()
-    batch = service.new_batch_http_request()
+    request_list = []
     for bucket_item in bucket_items:
-        batch.add(gcs_utils.delete_object(bucket, bucket_item['name']))
-    batch.execute()
+        request_list.append(gcs_utils.delete_object(bucket, bucket_item['name']))
+    gcs_utils.execute_as_batch(request_list)
 
 
 def delete_all_tables(dataset_id):
@@ -215,7 +214,7 @@ def write_cloud_file(bucket, f, prefix = ""):
 
 
 def write_cloud_fp(bucket, name, fp):
-    return gcs_utils.upload_object(bucket, name, fp)
+    return gcs_utils.upload_object(bucket, name, fp).execute()
 
 
 def populate_achilles(hpo_bucket, include_heel=True):

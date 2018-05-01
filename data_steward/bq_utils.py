@@ -1,3 +1,7 @@
+"""
+Wraps BigQuery JSON API
+except the TODO functions everything else returns as request that is to be executed
+"""
 import os
 from googleapiclient.discovery import build
 from google.appengine.api import app_identity
@@ -402,3 +406,11 @@ def list_dataset_contents(dataset_id):
         all_tables.extend(items or [])
         req = service.tables().list_next(req, resp)
     return all_tables
+
+
+def execute_as_batch(service, request_list):
+    batch = service.new_batch_http_request()
+    for request in request_list:
+        batch.add(request)
+    logging.debug(' ---- Running batch query ...')
+    batch.execute()

@@ -1,10 +1,12 @@
 """
 Wraps Google Cloud Storage JSON API (adapted from https://goo.gl/dRKiYz)
+except the listing functions everything else returns as request that is to be executed
 """
 
 import os
 from io import BytesIO
 import mimetypes
+import logging
 from google.appengine.api import app_identity
 import googleapiclient.discovery
 
@@ -138,7 +140,7 @@ def upload_object(bucket, name, fp):
         (mimetype, encoding) = mimetypes.guess_type(name)
     media_body = googleapiclient.http.MediaIoBaseUpload(fp, mimetype)
     req = service.objects().insert(bucket=bucket, body=body, media_body=media_body)
-    return req.execute(num_retries=GCS_DEFAULT_RETRY_COUNT)
+    return req
 
 
 def delete_object(bucket, name):
@@ -165,5 +167,17 @@ def copy_object(source_bucket, source_object_id, destination_bucket, destination
                                  destinationBucket=destination_bucket,
                                  destinationObject=destination_object_id,
                                  body = dict())
-    return req.execute(num_retries=GCS_DEFAULT_RETRY_COUNT)
+    return req
 
+
+def execute_as_batch(request_list):
+    service = create_service()
+    batch = service.new_batch_http_request()
+    def print_callback(*args):
+        # logging.warning('CALLBACK')
+        # logging.warning(locals())
+        pass
+    for request in request_list:
+        batch.add(request, callback=print_callback)
+    logging.debug(' ---- Running batch request...')
+    batch.execute()

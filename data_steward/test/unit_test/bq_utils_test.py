@@ -31,6 +31,7 @@ class BqUtilsTest(unittest.TestCase):
         self.testbed.init_datastore_v3_stub()
         self.hpo_bucket = gcs_utils.get_hpo_bucket(FAKE_HPO_ID)
         self.person_table_id = bq_utils.get_table_id(FAKE_HPO_ID, PERSON)
+<<<<<<< ee083d4b3c88191d1206534dcd375b3073225137
         test_util.delete_all_tables(self.EHR_DATASET_ID)
         self._empty_bucket()
 
@@ -67,7 +68,7 @@ class BqUtilsTest(unittest.TestCase):
         schema_path = os.path.join(resources.fields_path, schema_file_name)
         local_csv_path = os.path.join(test_util.TEST_DATA_EXPORT_PATH, csv_file_name)
         with open(local_csv_path, 'r') as fp:
-            response = gcs_utils.upload_object(self.hpo_bucket, csv_file_name, fp)
+            response = gcs_utils.upload_object(self.hpo_bucket, csv_file_name, fp).execute()
         hpo_bucket = self.hpo_bucket
         gcs_object_path = 'gs://%(hpo_bucket)s/%(csv_file_name)s' % locals()
         dataset_id = bq_utils.get_dataset_id()
@@ -81,7 +82,7 @@ class BqUtilsTest(unittest.TestCase):
 
     def test_load_cdm_csv(self):
         with open(FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp)
+            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp).execute()
         result = bq_utils.load_cdm_csv(FAKE_HPO_ID, PERSON)
         self.assertEqual(result['status']['state'], 'RUNNING')
 
@@ -99,7 +100,7 @@ class BqUtilsTest(unittest.TestCase):
 
     def test_query_result(self):
         with open(FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp)
+            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp).execute()
         result = bq_utils.load_cdm_csv(FAKE_HPO_ID, PERSON)
 
         load_job_id = result['jobReference']['jobId']
@@ -114,12 +115,12 @@ class BqUtilsTest(unittest.TestCase):
     def test_merge_with_good_data(self):
         running_jobs = []
         with open(NYC_FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('nyc'), 'person.csv', fp)
+            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('nyc'), 'person.csv', fp).execute()
         result = bq_utils.load_cdm_csv('nyc', 'person')
         running_jobs.append(result['jobReference']['jobId'])
 
         with open(PITT_FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('pitt'), 'person.csv', fp)
+            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('pitt'), 'person.csv', fp).execute()
         result = bq_utils.load_cdm_csv('pitt', 'person')
         running_jobs.append(result['jobReference']['jobId'])
 
@@ -171,12 +172,12 @@ class BqUtilsTest(unittest.TestCase):
     def test_merge_with_unmatched_schema(self):
         running_jobs = []
         with open(NYC_FIVE_PERSONS_MEASUREMENT_CSV, 'rb') as fp:
-            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('nyc'), 'measurement.csv', fp)
+            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('nyc'), 'measurement.csv', fp).execute()
         result = bq_utils.load_cdm_csv('nyc', 'measurement')
         running_jobs.append(result['jobReference']['jobId'])
 
         with open(PITT_FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('pitt'), 'person.csv', fp)
+            gcs_utils.upload_object(gcs_utils.get_hpo_bucket('pitt'), 'person.csv', fp).execute()
         result = bq_utils.load_cdm_csv('pitt', 'person')
         running_jobs.append(result['jobReference']['jobId'])
 
@@ -282,7 +283,7 @@ class BqUtilsTest(unittest.TestCase):
         expected_observation_ids = [int(row['observation_id'])
                                     for row in resources._csv_to_list(PITT_FIVE_PERSONS_OBSERVATION_CSV)]
         with open(PITT_FIVE_PERSONS_OBSERVATION_CSV, 'rb') as fp:
-            gcs_utils.upload_object(gcs_utils.get_hpo_bucket(hpo_id), 'observation.csv', fp)
+            gcs_utils.upload_object(gcs_utils.get_hpo_bucket(hpo_id), 'observation.csv', fp).execute()
         result = bq_utils.load_cdm_csv(hpo_id, 'observation')
         job_id = result['jobReference']['jobId']
         incomplete_jobs = bq_utils.wait_on_jobs([job_id])
@@ -299,5 +300,6 @@ class BqUtilsTest(unittest.TestCase):
 
     def tearDown(self):
         test_util.delete_all_tables(self.EHR_DATASET_ID)
-        self._empty_bucket()
+        self._drop_tables()
+        test_util.empty_bucket(self.hpo_bucket)
         self.testbed.deactivate()

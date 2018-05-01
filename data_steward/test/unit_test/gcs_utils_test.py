@@ -4,7 +4,7 @@ from google.appengine.ext import testbed
 from googleapiclient.errors import HttpError
 
 import gcs_utils
-from test_util import FIVE_PERSONS_PERSON_CSV, FAKE_HPO_ID
+from test_util import FIVE_PERSONS_PERSON_CSV, FAKE_HPO_ID, empty_bucket
 
 
 class GcsUtilsTest(unittest.TestCase):
@@ -19,18 +19,12 @@ class GcsUtilsTest(unittest.TestCase):
         self.testbed.init_datastore_v3_stub()
         self.hpo_bucket = gcs_utils.get_hpo_bucket(FAKE_HPO_ID)
         self.gcs_path = '/'.join([self.hpo_bucket, 'dummy'])
-        self._empty_bucket()
-
-    def _empty_bucket(self):
-        bucket_items = gcs_utils.list_bucket(self.hpo_bucket)
-        for bucket_item in bucket_items:
-            gcs_utils.delete_object(self.hpo_bucket, bucket_item['name'])
 
     def test_upload_object(self):
         bucket_items = gcs_utils.list_bucket(self.hpo_bucket)
         self.assertEqual(len(bucket_items), 0)
         with open(FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp)
+            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp).execute()
         bucket_items = gcs_utils.list_bucket(self.hpo_bucket)
         self.assertEqual(len(bucket_items), 1)
         bucket_item = bucket_items[0]
@@ -40,14 +34,14 @@ class GcsUtilsTest(unittest.TestCase):
         with open(FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
             expected = fp.read()
         with open(FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp)
+            gcs_utils.upload_object(self.hpo_bucket, 'person.csv', fp).execute()
         result = gcs_utils.get_object(self.hpo_bucket, 'person.csv')
         self.assertEqual(expected, result)
 
     def test_get_metadata_on_existing_file(self):
         expected_file_name = 'person.csv'
         with open(FIVE_PERSONS_PERSON_CSV, 'rb') as fp:
-            gcs_utils.upload_object(self.hpo_bucket, expected_file_name, fp)
+            gcs_utils.upload_object(self.hpo_bucket, expected_file_name, fp).execute()
         metadata = gcs_utils.get_metadata(self.hpo_bucket, expected_file_name)
         self.assertIsNotNone(metadata)
         self.assertEqual(metadata['name'], expected_file_name)
@@ -63,5 +57,5 @@ class GcsUtilsTest(unittest.TestCase):
         self.assertEqual(cm.exception.resp.status, 404)
 
     def tearDown(self):
-        self._empty_bucket()
+        empty_bucket(self.hpo_bucket)
         self.testbed.deactivate()

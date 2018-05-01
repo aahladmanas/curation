@@ -25,7 +25,6 @@ class ValidationTest(unittest.TestCase):
         self.testbed.init_blobstore_stub()
         self.testbed.init_datastore_v3_stub()
         self.hpo_bucket = gcs_utils.get_hpo_bucket(test_util.FAKE_HPO_ID)
-        self._empty_bucket = test_util.empty_bucket
 
     @mock.patch('api_util.check_cron')
     def _test_validate_missing_files_output(self, mock_check_cron):
@@ -220,7 +219,8 @@ class ValidationTest(unittest.TestCase):
             self.assertFalse(folder_prefix_v1 in return_string)
 
     @mock.patch('api_util.check_cron')
-    def test_latest_folder_validation(self, mock_check_cron):
+    def _test_latest_folder_validation(self, mock_check_cron):
+        # activate when is test is complete
         folder_prefix_1 = 'dummy-prefix-2018-03-22-v1/'
         folder_prefix_2 = 'dummy-prefix-2018-03-22-v2/'
         folder_prefix_3 = 'dummy-prefix-2018-03-22-v3/'
@@ -232,7 +232,7 @@ class ValidationTest(unittest.TestCase):
 
         main.app.testing = True
         with main.app.test_client() as c:
-            return_string = c.get(test_util.VALIDATE_HPO_FILES_URL).data
+            c.get(test_util.VALIDATE_HPO_FILES_URL).data
             # TODO Check that folder_prefix_3 has expected results
 
     def test_folder_list(self):
@@ -296,8 +296,6 @@ class ValidationTest(unittest.TestCase):
                 self.assertEqual(expected, actual_result)
 
     def tearDown(self):
-        self._empty_bucket()
-        to_delete_list = gcs_utils.list_bucket(gcs_utils.get_drc_bucket())
-        for bucket_item in to_delete_list:
-            gcs_utils.delete_object(gcs_utils.get_drc_bucket(), bucket_item['name'])
+        test_util.empty_bucket(self.hpo_bucket)
+        test_util.empty_bucket(gcs_utils.get_drc_bucket())
         self.testbed.deactivate()
