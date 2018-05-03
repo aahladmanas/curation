@@ -174,9 +174,16 @@ def run_validation(hpo_id, error_ignore_flag=False):
         errors = []
         results = []
         found_cdm_file_names = found_cdm_files
+        dataset_contents = bq_utils.list_dataset_contents(bq_utils.get_dataset_id())
         for cdm_file_name in common.CDM_FILES:
             found = parsed = loaded = 0
             cdm_table_name = cdm_file_name.split('.')[0]
+            # creating empty table if it doesn't exist
+            table_id = bq_utils.get_table_id(hpo_id, cdm_table_name)
+            if table_id not in dataset_contents:
+                # load empty table
+                bq_utils.create_standard_table(cdm_table_name, table_id, drop_existing=True)
+
             if cdm_file_name in found_cdm_file_names:
                 found = 1
                 load_results = bq_utils.load_cdm_csv(hpo_id, cdm_table_name, folder_prefix)
@@ -197,10 +204,7 @@ def run_validation(hpo_id, error_ignore_flag=False):
                     message = message_fmt % (hpo_id, cdm_table_name, load_job_id)
                     logging.error(message)
                     raise InternalValidationError(message)
-            else:
-                # load empty table
-                table_id = bq_utils.get_table_id(hpo_id, cdm_table_name)
-                bq_utils.create_standard_table(cdm_table_name, table_id, drop_existing=True)
+
             if cdm_file_name in common.REQUIRED_FILES or found:
                 results.append((cdm_file_name, found, parsed, loaded))
 
