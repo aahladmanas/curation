@@ -148,7 +148,6 @@ def _upload_achilles_files(hpo_id=None, folder_prefix='', target_bucket=None):
         bucket_file_name = filename.split(resources.resource_path + os.sep)[1].strip()
         with open(filename, 'r') as fp:
             request_list.append(gcs_utils.upload_object(bucket, folder_prefix + bucket_file_name, fp).execute())
-    gcs_utils.execute_as_batch(request_list)
 
 
 @api_util.auth_required_cron
@@ -171,7 +170,8 @@ def validate_all_hpos():
             run_validation(hpo_id, True)
         except BucketDoesNotExistError as bucket_error:
             bucket = bucket_error.bucket
-            logging.warn('Bucket `{bucket}` configured for hpo_id `hpo_id` does not exist'.format(bucket=bucket,
+            logging.warn('Bucket `{bucket}` configured for hpo_id `{hpo_id}` does not exist'.format(bucket=bucket,
+                                                                                                    hpo_id=hpo_id))
             continue
     return 'validation done!'
 
@@ -236,6 +236,7 @@ def run_validation(hpo_id, force_run=False):
             found = parsed = loaded = 0
             cdm_table_name = cdm_file_name.split('.')[0]
             if cdm_file_name in found_cdm_file_names:
+                found = 1
                 load_results = bq_utils.load_cdm_csv(hpo_id, cdm_table_name, folder_prefix)
                 load_job_id = load_results['jobReference']['jobId']
                 incomplete_jobs = bq_utils.wait_on_jobs([load_job_id])

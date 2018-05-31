@@ -208,8 +208,8 @@ class ValidationTest(unittest.TestCase):
         folder_prefix = 'dummy-prefix-2018-03-22/'
 
         # upload all five_persons files
-        test_util.write_cloud_str(self.hpo_bucket, folder_prefix_v1 + 'person.csv', contents_str='.')
-        test_util.write_cloud_str(self.hpo_bucket, folder_prefix + 'person.csv', contents_str='.')
+        test_util.write_cloud_str(self.hpo_bucket, folder_prefix_v1 + 'measurement.csv', contents_str='.')
+        test_util.write_cloud_str(self.hpo_bucket, folder_prefix + 'measurement.csv', contents_str='.')
         test_util.write_cloud_str(self.hpo_bucket, folder_prefix + common.PROCESSED_TXT, contents_str='.')
 
         main.app.testing = True
