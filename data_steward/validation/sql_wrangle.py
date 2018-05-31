@@ -43,7 +43,13 @@ def get_commands(sql_path):
     with open(sql_path, 'r') as f:
         text = f.read()
         commands = text.split(COMMAND_SEP)
-        return filter(is_active_command, commands)
+        INSERT_STATEMENT_PATTERN = re.compile('\s*insert(\s|\w|\.)+\((\s|\w|\,)+\)')
+        def remove_insert(line):
+            return line
+            if 'VALUES' in line:
+                return line
+            return re.sub(INSERT_STATEMENT_PATTERN, "", line)
+        return map(remove_insert, filter(is_active_command, commands))
 
 
 def qualify_tables(command, hpo_id=None):

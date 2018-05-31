@@ -107,12 +107,12 @@ class AchillesTest(unittest.TestCase):
         result = bq_utils.query(cmd).execute()
         self.assertEqual(int(result['rows'][0]['f'][0]['v']), ACHILLES_RESULTS_COUNT)
 
-    def test_parse_temp(self):
+    def _test_parse_temp(self):
         commands = achilles._get_run_analysis_commands(FAKE_HPO_ID)
         for command in commands:
             is_temp = validation.sql_wrangle.is_to_temp_table(command)
             self.assertFalse(is_temp)
 
     def tearDown(self):
-        test_util.empty_bucket(self.hpo_bucket)
+        # test_util.empty_bucket(self.hpo_bucket)
         self.testbed.deactivate()

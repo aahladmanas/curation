@@ -4,7 +4,6 @@ import bq_utils
 import resources
 import sql_wrangle
 import logging
-import time
 
 ACHILLES_ANALYSIS = 'achilles_analysis'
 ACHILLES_RESULTS = 'achilles_results'
@@ -51,32 +50,39 @@ def run_analyses(hpo_id):
     :param hpo_id:
     :return:
     """
-    count = 0
     commands = _get_run_analysis_commands(hpo_id)
     service = bq_utils.create_service()
-    batch = service.new_batch_http_request()
-    def count_increment(pid, response, exception):
-        print(pid, response)
-        count = count + 1
-    for command in commands[:50]:
-        logging.debug(' ---- Adding `%s` to batch' % command)
-        batch.add(bq_utils.query(command))
-    logging.debug(' ---- Running batch query ...')
-    batch.execute() 
-    if count == 50:
-        assert False,'count getting updated'
-    batch = service.new_batch_http_request()
-    for command in commands[50:100]:
-        logging.debug(' ---- Adding `%s` to batch' % command)
-        batch.add(bq_utils.query(command))
-    logging.debug(' ---- Running batch query ...')
-    batch.execute()
-    batch = service.new_batch_http_request()
-    for command in commands[100:]:
-        logging.debug(' ---- Adding `%s` to batch' % command)
-        batch.add(bq_utils.query(command))
-    logging.debug(' ---- Running batch query ...')
-    batch.execute()
+    commands_to_retry = list(range(len(commands)))
+    retry_count = 5
+
+    while len(commands_to_retry) > 0 and retry_count > 0 :
+        retry_count = retry_count - 1
+
+        failed_commands = []
+        def log_response(pid, response, exception, failed_commands = failed_commands):
+            if response is None:
+                logging.warning((exception, 'lol'))
+                failed_commands.append(int(pid))
+
+        batch = service.new_batch_http_request(callback=log_response)
+        count = 0
+        for ind in commands_to_retry:
+            command = commands[ind]
+            logging.debug(' ---- Adding `%s` to batch' % command)
+            batch.add(bq_utils.query(command), request_id = str(ind))
+            count = count + 1
+            if count >= 10:
+                batch.execute()
+                batch = service.new_batch_http_request(callback=log_response)
+                count = 0
+
+        # run any remain queries
+        if count != 0:
+            batch.execute()
+
+        # retry the failed commands
+        commands_to_retry = [ind for ind in failed_commands]
+
 
 def create_tables(hpo_id, drop_existing=False):
     """
